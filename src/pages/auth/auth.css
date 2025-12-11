@@ -1,0 +1,162 @@
+/* WRAPPER BACKGROUND */
+.auth-wrapper {
+    width: 100%;
+    height: 100vh;
+    background-image: url("../../../public/authBG.jpg");
+    /* đặt file BG tại public */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 32px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Top right tabs */
+.auth-top-right {
+  position: absolute;
+  top: 32px;
+  right: 32px;
+  display: flex;
+  gap: 10px;
+}
+
+/* Default (inactive) */
+.auth-tab-btn {
+  padding: 10px 20px;
+  background: white;
+  border: 1px solid #f1633b;
+  border-radius: 999px;
+  color: #f1633b;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+/* Active (orange background, white text) */
+.auth-tab-btn.active {
+  background: #f1633b;
+  color: white;
+  border: 1px solid #f1633b;
+}
+
+/* Hover effect */
+.auth-tab-btn:hover {
+  opacity: 0.8;
+}
+
+
+.auth-link-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.auth-demo-btn {
+    background-color: #f1633b;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 80px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* LEFT INFO */
+.auth-left-info {
+    position: absolute;
+    top: 32px;
+    left: 32px;
+}
+
+.auth-logo {
+    font-size: 24px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.auth-email {
+    font-size: 14px;
+    text-decoration: none;
+    color: #333;
+}
+
+/* AUTH CARD */
+.auth-card {
+    width: 420px;
+    background: white;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(6px);
+    padding: 36px 32px;
+    border-radius: 24px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+/* TITLES */
+.auth-title {
+    margin-bottom: 8px !important;
+}
+
+.auth-subtitle {
+    display: block;
+    color: #666;
+    margin-bottom: 24px;
+}
+
+/* FORM */
+.auth-form .ant-form-item {
+    margin-bottom: 16px;
+}
+
+.auth-subtle-text {
+    display: block;
+    margin-bottom: 16px;
+    color: #666;
+    text-align: left;
+}
+
+.auth-submit-btn {
+    width: 100%;
+    background-color: #f1633b !important;
+    border: none;
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+/* DIVIDER */
+.auth-divider {
+    margin: 16px 0;
+    color: #999;
+}
+
+/* SOCIAL BUTTONS */
+.auth-social-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.auth-social-buttons button {
+    flex: 1;
+}
+
+/* FOOTER TEXT */
+.auth-bottom-text {
+    color: #666;
+    font-size: 14px;
+}
+
+.auth-bottom-text a {
+    color: #333;
+    font-weight: 500;
+}
+
+.auth-footer {
+    margin-top: 22px;
+    font-size: 12px;
+    color: #999;
+}
