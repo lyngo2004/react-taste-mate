@@ -153,7 +153,7 @@ const OnboardingPage = () => {
     };
 
     // -------- BUILD PAYLOAD --------
-    const buildPayload = () => {
+    const buildPreferences = () => {
         const q1 = answersByQuestion["q1"] || [];
         const q2 = answersByQuestion["q2"] || [];
         const q3 = answersByQuestion["q3"] || [];
@@ -181,17 +181,29 @@ const OnboardingPage = () => {
             return;
         }
 
-        const payload = buildPayload();
+        const preferences = buildPreferences();
+        const userId = localStorage.getItem("userId");
+
+        const payload = {
+            userId,
+            preferences,
+        };
 
         try {
             const res = await onboardingApi.submitAnswers(payload);
 
-            notification.success({
-                message: "Success",
-                description: res?.EM || "Preferences saved successfully!",
-            });
-
-            navigate("/recommendations");
+            if (res?.EC === 0) {
+                notification.success({
+                    message: "Success",
+                    description: res?.EM || "Preferences saved successfully!",
+                });
+                // navigate("/recommendations");
+            } else {
+                notification.error({
+                    message: "Error",
+                    description: res?.EM || "Failed to submit preferences.",
+                });
+            }
         } catch (err) {
             console.error(err);
             notification.error({

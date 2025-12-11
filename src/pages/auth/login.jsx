@@ -18,7 +18,8 @@ const LoginPage = () => {
 
         if (res?.EC === 0) {
             localStorage.setItem("accessToken", res.DT.accessToken);
-
+            localStorage.setItem("userId", res.DT.user.userId);
+            
             notification.success({
                 message: "Login",
                 description: res.EM || "Login successfully!",
