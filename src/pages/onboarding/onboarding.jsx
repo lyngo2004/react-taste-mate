@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Input, Button, Typography, Spin, notification } from "antd";
 import onboardingApi from "../../routers/onboardingApi";
+import mlRecommendApi from "../../routers/mlRecommendApi";
+import courseItemApi from "../../routers/courseItemApi";
 import StepProgress from '../../components/onboarding/stepProgress';
 import TagOption from '../../components/onboarding/tagOption';
 import './onboarding.css'
@@ -12,13 +14,16 @@ const OnboardingPage = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const inputRef = useRef(null);
-
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const [answersByQuestion, setAnswersByQuestion] = useState({});
     const [tempInput, setTempInput] = useState("");
+
+    const [candidateOptions, setCandidateOptions] = useState([]); // options cho q5 (20 món)
+    const [loadingCandidates, setLoadingCandidates] = useState(false);
+    const [finishing, setFinishing] = useState(false); // loading khi submit + recommend
+
 
     // -------- STEP LOGIC --------
     const currentStep = useMemo(() => {
@@ -28,27 +33,91 @@ const OnboardingPage = () => {
         return step;
     }, [searchParams]);
 
+    const prepareQ5Candidates = async () => {
+        setLoadingCandidates(true);
+
+        try {
+            const mlPayload = buildMLPayload();
+
+            const candRes = await mlRecommendApi.getCandidates(mlPayload);
+            const data = candRes?.DT || [];
+
+            // sort by popularity desc
+            const topIds = data
+                .slice()
+                .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+                .slice(0, 20)
+                .map((x) => x.id);
+
+            if (!topIds.length) {
+                setCandidateOptions([]);
+                return;
+            }
+
+            // 1 request duy nhất
+            const courseRes = await courseItemApi.getCourseItemsByIds(topIds);
+            if (!courseRes || courseRes.EC !== 0) {
+                setCandidateOptions([]);
+                return;
+            }
+
+            const courses = courseRes.DT || [];
+
+            // Map courseId -> courseName để render tag
+            const options = courses.map((c) => ({
+                label: c.courseName,
+                value: c.courseId, // seed_items sẽ là courseId
+            }));
+
+            console.log("ML candidates:", data);
+            console.log("Top IDs:", topIds);
+            console.log("Course res:", courseRes);
+
+
+            setCandidateOptions(options);
+        } catch (err) {
+            console.error(err);
+            setCandidateOptions([]);
+        } finally {
+            setLoadingCandidates(false);
+        }
+    };
+
+    const validateUpToStep4 = () => {
+        for (let i = 1; i <= 4; i++) {
+            const key = `q${i}`;
+            const ans = answersByQuestion[key];
+            if (!ans || (Array.isArray(ans) && ans.length === 0)) {
+                return { ok: false, step: i, message: `Please answer question ${i} first.` };
+            }
+        }
+        return { ok: true };
+    };
+
     // Auto scroll to top when step changes
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: "smooth" });
     }, [currentStep]);
-
-    // Auto focus input for custom fields (q4, q5)
-    useEffect(() => {
-        if (inputRef.current) {
-            setTimeout(() => {
-                inputRef.current.focus();
-            }, 200); // đợi animation chạy
-        }
-    }, [currentStep]);
-
 
     const goToStep = (step) => {
         setSearchParams({ step: String(step) });
         setTempInput("");
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
+        if (currentStep === 4) {
+            const v = validateUpToStep4();
+            if (!v.ok) {
+                notification.warning({ message: "Incomplete", description: v.message });
+                goToStep(v.step);
+                return;
+            }
+
+            await prepareQ5Candidates(); // gọi ML + map options
+            goToStep(5);
+            return;
+        }
+
         if (currentStep < TOTAL_STEPS) goToStep(currentStep + 1);
     };
 
@@ -57,7 +126,7 @@ const OnboardingPage = () => {
     };
 
     const handleSkip = () => {
-        if (currentStep < TOTAL_STEPS) goToStep(currentStep + 1);
+        if (currentStep < 4) goToStep(currentStep + 1);
     };
 
     // -------- FETCH QUESTIONS --------
@@ -87,39 +156,20 @@ const OnboardingPage = () => {
             const arr = prev[qid] || [];
             const exists = arr.includes(option);
 
-            return {
-                ...prev,
-                [qid]: exists ? arr.filter((v) => v !== option) : [...arr, option],
-            };
+            if (exists) {
+                return { ...prev, [qid]: arr.filter((v) => v !== option) };
+            }
+
+            if (qid === "q5" && arr.length >= 5) {
+                notification.warning({
+                    message: "Limit reached",
+                    description: "You can only select 5 dishes.",
+                });
+                return prev;
+            }
+
+            return { ...prev, [qid]: [...arr, option] };
         });
-    };
-
-    // -------- CUSTOM INPUT (q4 + q5) --------
-    const addCustomItem = () => {
-        const trimmed = tempInput.trim();
-        if (!trimmed) return;
-
-        const qid = currentQuestion.id;
-
-        setAnswersByQuestion((prev) => {
-            const arr = prev[qid] || [];
-            if (arr.includes(trimmed)) return prev;
-
-            return {
-                ...prev,
-                [qid]: [...arr, trimmed],
-            };
-        });
-
-        setTempInput("");
-    };
-
-    const removeDish = (d) => {
-        const qid = "q5";
-        setAnswersByQuestion((prev) => ({
-            ...prev,
-            [qid]: (prev[qid] || []).filter((x) => x !== d),
-        }));
     };
 
     // -------- VALIDATION --------
@@ -153,6 +203,25 @@ const OnboardingPage = () => {
     };
 
     // -------- BUILD PAYLOAD --------
+    const buildMLPayload = () => {
+        const q1 = answersByQuestion["q1"] || []; // cuisines (UI có thể viết hoa)
+        const q2 = answersByQuestion["q2"] || []; // taste_tags (đúng format)
+        const q3 = answersByQuestion["q3"] || []; // health_goals
+        const q4 = answersByQuestion["q4"] || []; // avoid_ingredients
+
+        return {
+            preferences: {
+                cuisines: q1.map((x) => String(x).toLowerCase()), // chỉ lowercase q1
+                taste_tags: q2,
+                health_goals: q3,
+            },
+            restrictions: {
+                avoid_ingredients: q4,
+            },
+            seed_items: [],
+        };
+    };
+
     const buildPreferences = () => {
         const q1 = answersByQuestion["q1"] || [];
         const q2 = answersByQuestion["q2"] || [];
@@ -161,57 +230,83 @@ const OnboardingPage = () => {
         const q5 = answersByQuestion["q5"] || [];
 
         return {
-            taste_tag: [...new Set([...q1, ...q2])],
-            health_tag: q3,
-            allergies: q4,
-            top_dishes: q5,
+            cuisines: q1,
+            taste_tags: q2,
+            health_goals: q3,
+            avoid_ingredients: q4,
+            seed_items: q5,
         };
     };
 
     // -------- SUBMIT --------
     const handleFinish = async () => {
+        // validate đủ 5 câu
         const result = validateAll();
-
         if (!result.ok) {
-            notification.warning({
-                message: "Incomplete",
-                description: result.message,
-            });
+            notification.warning({ message: "Incomplete", description: result.message });
             goToStep(result.step);
             return;
         }
 
-        const preferences = buildPreferences();
         const userId = localStorage.getItem("userId");
+        const preferencesForDB = buildPreferences(); // giữ như cũ nhưng q5 giờ là seed_items IDs
 
-        const payload = {
-            userId,
-            preferences,
-        };
+        // seed items (courseId) để call recommend
+        const seedItems = answersByQuestion["q5"] || [];
+
+        setFinishing(true);
 
         try {
-            const res = await onboardingApi.submitAnswers(payload);
+            // (A) lưu DB như cũ
+            const saveRes = await onboardingApi.submitAnswers({
+                userId,
+                preferences: preferencesForDB,
+            });
 
-            if (res?.EC === 0) {
-                notification.success({
-                    message: "Success",
-                    description: res?.EM || "Preferences saved successfully!",
-                });
-                navigate("/recommendation");
-            } else {
-                notification.error({
-                    message: "Error",
-                    description: res?.EM || "Failed to submit preferences.",
-                });
+            if (saveRes?.EC !== 0) {
+                notification.error({ message: "Error", description: saveRes?.EM || "Save failed" });
+                setFinishing(false);
+                return;
             }
+
+            // (B) call recommend
+            const mlBase = buildMLPayload();
+            const recommendPayload = {
+                ...mlBase,
+                seed_items: seedItems.map((x) => Number(x)), // đảm bảo number nếu ML cần
+            };
+
+            const recRes = await mlRecommendApi.getRecommend(recommendPayload);
+            const recData = recRes?.DT || [];
+
+            const normalized = recData.map((x) => ({
+                courseId: x.id,       
+                score: x.score,
+            }));
+
+            localStorage.setItem("recommendResult", JSON.stringify(normalized));
+
+            notification.success({
+                message: "Success",
+                description: "Preferences saved. Generating recommendations...",
+            });
+
+            navigate("/recommendations");
         } catch (err) {
             console.error(err);
-            notification.error({
-                message: "Error",
-                description: "Failed to submit preferences.",
-            });
+            notification.error({ message: "Error", description: "Failed to finish onboarding." });
+        } finally {
+            setFinishing(false);
         }
     };
+
+    const getOptionsForQuestion = (q) => {
+        if (q.id === "q5" && q.dynamicOptions) {
+            return candidateOptions; // [{label, value}]
+        }
+        return q.options || []; // q1–q4
+    };
+
 
     // -------- RENDER QUESTION --------
     const renderContent = () => {
@@ -220,9 +315,48 @@ const OnboardingPage = () => {
         const selected = answersByQuestion[qid] || [];
 
         if (q.type === "multi") {
+            const options = getOptionsForQuestion(q);
+
+            if (q.id === "q5") {
+                if (loadingCandidates) {
+                    return (
+                        <div style={{ paddingTop: 40, textAlign: "center" }}>
+                            <Spin size="large" />
+                            <div style={{ marginTop: 12, color: "#888" }}>
+                                Preparing suggestions...
+                            </div>
+                        </div>
+                    );
+                }
+
+                if (!options.length) {
+                    return <Text type="secondary">No suggestions available.</Text>;
+                }
+
+                return (
+                    <div className="onb-options-grid">
+                        {options.map((opt) => (
+                            <TagOption
+                                key={opt.value}
+                                label={opt.label}
+                                selected={selected.includes(opt.value)}
+                                onClick={() => toggleSelect(qid, opt.value)}
+                            />
+                        ))}
+
+                        <div className="onb-selected-count">
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                {selected.length}/5 selected
+                            </Text>
+                        </div>
+                    </div>
+                );
+            }
+
+            // q1–q4 (options là string)
             return (
                 <div className="onb-options-grid">
-                    {q.options.map((opt) => (
+                    {options.map((opt) => (
                         <TagOption
                             key={opt}
                             label={opt}
@@ -230,49 +364,6 @@ const OnboardingPage = () => {
                             onClick={() => toggleSelect(qid, opt)}
                         />
                     ))}
-
-                    {q.allowCustomInput && (
-                        <div className="onb-custom-input">
-                            <Input
-                                ref={inputRef}
-                                placeholder={q.customInputPlaceholder}
-                                value={tempInput}
-                                onChange={(e) => setTempInput(e.target.value)}
-                                onPressEnter={addCustomItem}
-                            />
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                Press Enter to add
-                            </Text>
-                        </div>
-                    )}
-                </div>
-            );
-        }
-
-        if (q.type === "multi-text") {
-            const dishes = selected;
-
-            return (
-                <div>
-                    <Input
-                        ref={inputRef}
-                        placeholder={q.inputPlaceholder}
-                        value={tempInput}
-                        onChange={(e) => setTempInput(e.target.value)}
-                        onPressEnter={addCustomItem}
-                    />
-
-                    <div style={{ marginTop: 12 }}>
-                        {dishes.map((d) => (
-                            <span key={d} className="dish-tag" onClick={() => removeDish(d)}>
-                                {d} ✕
-                            </span>
-                        ))}
-                    </div>
-
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                        {dishes.length}/{q.maxItems} dishes added
-                    </Text>
                 </div>
             );
         }
@@ -292,6 +383,16 @@ const OnboardingPage = () => {
         );
     }
 
+    if (finishing) {
+        return (
+            <div className="onboarding-wrapper">
+                <div className="loading-box">
+                    <Spin size="large" />
+                    <p>Generating recommendations...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="onboarding-wrapper">
@@ -308,10 +409,11 @@ const OnboardingPage = () => {
 
                     <h2 className="onb-title">{currentQuestion.question}</h2>
                     <p className="onb-subtitle">
-                        {currentQuestion.type === "multi-text"
-                            ? "Enter up to 5 dishes"
+                        {currentStep === 5
+                            ? "Select exactly 5 dishes"
                             : "Select all that apply"}
                     </p>
+
 
                     <div key={currentStep} className="onb-content onb-animate">
                         {renderContent()}
@@ -327,7 +429,7 @@ const OnboardingPage = () => {
                             <span className="arrow-icon">&lt;</span>
                         </button>
 
-                        {currentStep < TOTAL_STEPS && (
+                        {currentStep < 4 && (
                             <button className="footer-skip" onClick={handleSkip}>
                                 Skip
                             </button>
@@ -335,6 +437,7 @@ const OnboardingPage = () => {
 
                         <button
                             className="footer-nav-btn primary"
+                            disabled={currentStep === 5 && (answersByQuestion.q5 || []).length < 5}
                             onClick={currentStep === TOTAL_STEPS ? handleFinish : handleNext}
                         >
                             <span className="arrow-icon">

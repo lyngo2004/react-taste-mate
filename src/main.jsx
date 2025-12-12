@@ -38,7 +38,7 @@ let router = createBrowserRouter([
         element: <OnboardingPage />
       },
       {
-        path: "recommendation",
+        path: "recommendations",
         element: <RecommendationsPage />
       }
     ]

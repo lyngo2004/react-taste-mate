@@ -4,7 +4,7 @@ const onboardingApi = {
   async getQuestions() {
     try {
       const res = await axios.get("api/onboarding");
-      return res;     // res.data là backend trả về
+      return res;     
     } catch (error) {
       console.error("onboardingApi.getQuestions error:", error.response?.data || error);
       return null;

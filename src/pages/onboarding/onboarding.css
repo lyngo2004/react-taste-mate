@@ -15,7 +15,7 @@
     display: flex;
     width: 100%;
     max-width: 980px;
-    height: 520px;
+    height: 560px;
     background: #ffffff;
     border-radius: 22px;
     padding: 40px 48px;
@@ -151,6 +151,11 @@
     display: flex;
     flex-wrap: wrap;
     margin-top: 8px;
+}
+
+.onb-selected-count {
+  flex-basis: 100%;
+  margin-top: 8px;
 }
 
 .tag-option {

@@ -3,7 +3,6 @@ import axios from "../routers/axios";
 const courseItemApi = {
   async getAllCourseItems() {
     try {
-      // TODO: nếu route BE khác, chỉ cần đổi string này
       const res = await axios.get("api/course");
       return res;
     } catch (error) {
@@ -14,6 +13,18 @@ const courseItemApi = {
       return null;
     }
   },
+
+  async getCourseItemsByIds(ids = []) {
+  try {
+    const query = ids.join(",");
+    const res = await axios.get(`api/course/by-ids?ids=${query}`);
+    return res;
+  } catch (error) {
+    console.error("courseItemApi.getCourseItemsByIds error:", error.response?.data || error);
+    return null;
+  }
+}
+
 };
 
 export default courseItemApi;
