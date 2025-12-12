@@ -10,6 +10,8 @@ import {
   from "react-router";
 import OnboardingPage from './pages/onboarding/onboarding.jsx';
 import { Navigate } from 'react-router'
+import RecommendationsPage from './pages/recommendations/recommendation.jsx'
+
 
 let router = createBrowserRouter([
   {
@@ -31,14 +33,14 @@ let router = createBrowserRouter([
     path: "/",
     element: <App />,
     children: [
-      // {
-      //   path: "home",
-      //   element: <HomePage />
-      // },
       {
         path: "onboarding",
         element: <OnboardingPage />
       },
+      {
+        path: "recommendation",
+        element: <RecommendationsPage />
+      }
     ]
   }
 ]);

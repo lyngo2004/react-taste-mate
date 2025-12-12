@@ -197,7 +197,7 @@ const OnboardingPage = () => {
                     message: "Success",
                     description: res?.EM || "Preferences saved successfully!",
                 });
-                // navigate("/recommendations");
+                navigate("/recommendation");
             } else {
                 notification.error({
                     message: "Error",
