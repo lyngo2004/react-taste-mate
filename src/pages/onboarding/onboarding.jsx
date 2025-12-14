@@ -181,14 +181,14 @@ const OnboardingPage = () => {
             const ans = answersByQuestion[q.id];
 
             if (q.id === "q5") {
-                if (!ans || ans.length < 5) {
-                    return {
-                        ok: false,
-                        step: i + 1,
-                        message: "Please provide 5 dishes that suit you best."
-                    };
-                }
-            } else {
+            //     if (!ans || ans.length < 5) {
+            //         return {
+            //             ok: false,
+            //             step: i + 1,
+            //             message: "Please provide 5 dishes that suit you best."
+            //         };
+            //     }
+            // } else {
                 if (!ans || ans.length === 0) {
                     return {
                         ok: false,
@@ -410,7 +410,7 @@ const OnboardingPage = () => {
                     <h2 className="onb-title">{currentQuestion.question}</h2>
                     <p className="onb-subtitle">
                         {currentStep === 5
-                            ? "Select exactly 5 dishes"
+                            ? "Select dishes suit you best"
                             : "Select all that apply"}
                     </p>
 
@@ -437,7 +437,9 @@ const OnboardingPage = () => {
 
                         <button
                             className="footer-nav-btn primary"
-                            disabled={currentStep === 5 && (answersByQuestion.q5 || []).length < 5}
+                            disabled={currentStep === 5 
+                                && (answersByQuestion.q5 || []).length < 1
+                            }
                             onClick={currentStep === TOTAL_STEPS ? handleFinish : handleNext}
                         >
                             <span className="arrow-icon">
