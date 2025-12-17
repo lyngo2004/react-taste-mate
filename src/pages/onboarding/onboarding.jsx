@@ -113,8 +113,9 @@ const OnboardingPage = () => {
                 return;
             }
 
-            await prepareQ5Candidates(); // gọi ML + map options
             goToStep(5);
+
+            await prepareQ5Candidates(); // gọi ML + map options
             return;
         }
 
@@ -151,16 +152,38 @@ const OnboardingPage = () => {
     }, [questions, currentStep]);
 
     // -------- SELECT TAG --------
+    const NONE_OPTION = "❌ None of them";
+
     const toggleSelect = (qid, option) => {
         setAnswersByQuestion((prev) => {
-            const arr = prev[qid] || [];
-            const exists = arr.includes(option);
+            const current = prev[qid] || [];
+            const isNone = option === NONE_OPTION;
+            const hasNone = current.includes(NONE_OPTION);
 
-            if (exists) {
-                return { ...prev, [qid]: arr.filter((v) => v !== option) };
+            // Nếu click lại "None of them" → bỏ chọn
+            if (isNone && hasNone) {
+                return { ...prev, [qid]: [] };
             }
 
-            if (qid === "q5" && arr.length >= 5) {
+            // Nếu chọn "None of them" → clear hết cái khác
+            if (isNone) {
+                return { ...prev, [qid]: [NONE_OPTION] };
+            }
+
+            // Nếu đã chọn "None of them" mà click option khác → ignore
+            if (hasNone) {
+                return prev;
+            }
+
+            // Logic cũ (toggle bình thường)
+            const exists = current.includes(option);
+
+            if (exists) {
+                return { ...prev, [qid]: current.filter((v) => v !== option) };
+            }
+
+            // Riêng q5: giới hạn 5 món
+            if (qid === "q5" && current.length >= 5) {
                 notification.warning({
                     message: "Limit reached",
                     description: "You can only select 5 dishes.",
@@ -168,7 +191,7 @@ const OnboardingPage = () => {
                 return prev;
             }
 
-            return { ...prev, [qid]: [...arr, option] };
+            return { ...prev, [qid]: [...current, option] };
         });
     };
 
@@ -181,14 +204,14 @@ const OnboardingPage = () => {
             const ans = answersByQuestion[q.id];
 
             if (q.id === "q5") {
-            //     if (!ans || ans.length < 5) {
-            //         return {
-            //             ok: false,
-            //             step: i + 1,
-            //             message: "Please provide 5 dishes that suit you best."
-            //         };
-            //     }
-            // } else {
+                //     if (!ans || ans.length < 5) {
+                //         return {
+                //             ok: false,
+                //             step: i + 1,
+                //             message: "Please provide 5 dishes that suit you best."
+                //         };
+                //     }
+                // } else {
                 if (!ans || ans.length === 0) {
                     return {
                         ok: false,
@@ -256,6 +279,8 @@ const OnboardingPage = () => {
 
         setFinishing(true);
 
+        await new Promise((r) => setTimeout(r, 0));
+
         try {
             // (A) lưu DB như cũ
             const saveRes = await onboardingApi.submitAnswers({
@@ -280,7 +305,7 @@ const OnboardingPage = () => {
             const recData = recRes?.DT || [];
 
             const normalized = recData.map((x) => ({
-                courseId: x.id,       
+                courseId: x.id,
                 score: x.score,
             }));
 
@@ -314,6 +339,7 @@ const OnboardingPage = () => {
         const qid = q.id;
         const selected = answersByQuestion[qid] || [];
 
+        const hasNone = selected.includes(NONE_OPTION);
         if (q.type === "multi") {
             const options = getOptionsForQuestion(q);
 
@@ -340,6 +366,7 @@ const OnboardingPage = () => {
                                 key={opt.value}
                                 label={opt.label}
                                 selected={selected.includes(opt.value)}
+                                disabled={hasNone && opt.value !== NONE_OPTION}
                                 onClick={() => toggleSelect(qid, opt.value)}
                             />
                         ))}
@@ -361,6 +388,7 @@ const OnboardingPage = () => {
                             key={opt}
                             label={opt}
                             selected={selected.includes(opt)}
+                            disabled={hasNone && opt !== NONE_OPTION}
                             onClick={() => toggleSelect(qid, opt)}
                         />
                     ))}
@@ -437,7 +465,7 @@ const OnboardingPage = () => {
 
                         <button
                             className="footer-nav-btn primary"
-                            disabled={currentStep === 5 
+                            disabled={currentStep === 5
                                 && (answersByQuestion.q5 || []).length < 1
                             }
                             onClick={currentStep === TOTAL_STEPS ? handleFinish : handleNext}

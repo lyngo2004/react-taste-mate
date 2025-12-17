@@ -40,14 +40,14 @@ const LoginPage = () => {
             <div className="auth-top-right">
                 <button
                     className={`auth-tab-btn ${!isLogin ? "active" : ""}`}
-                    onClick={() => navigate("/auth/register")}
+                    onClick={() => navigate("/register")}
                 >
                     Sign up
                 </button>
 
                 <button
                     className={`auth-tab-btn ${isLogin ? "active" : ""}`}
-                    onClick={() => navigate("/auth/login")}
+                    onClick={() => navigate("/login")}
                 >
                     Sign in
                 </button>

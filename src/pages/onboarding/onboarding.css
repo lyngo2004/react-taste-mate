@@ -169,6 +169,12 @@
     transition: all 0.2s ease;
 }
 
+.tag-option--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+
 .tag-option:hover {
     border-color: #f1633b;
     transform: translateY(-2px);

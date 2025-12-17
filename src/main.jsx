@@ -11,6 +11,7 @@ import {
 import OnboardingPage from './pages/onboarding/onboarding.jsx';
 import { Navigate } from 'react-router'
 import RecommendationsPage from './pages/recommendations/recommendation.jsx'
+import RegisterPage from './pages/auth/register.jsx'
 
 
 let router = createBrowserRouter([
@@ -24,10 +25,10 @@ let router = createBrowserRouter([
     element: <LoginPage />
   },
 
-  // {
-  //   path: "/register",
-  //   element: <RegisterPage />
-  // },
+  {
+    path: "/register",
+    element: <RegisterPage />
+  },
 
   {
     path: "/",
