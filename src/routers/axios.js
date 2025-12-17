@@ -2,7 +2,7 @@ import axios from "axios";
 import { notification } from "antd";
 // Set config defaults when creating the instance
 const instance = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || "http://localhost:5000",
+  baseURL: import.meta.env.VITE_BACKEND_URL || "http://18.143.61.7:5000/",
 });
 
 // Alter defaults after instance has been created
