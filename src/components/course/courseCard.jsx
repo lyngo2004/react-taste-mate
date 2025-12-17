@@ -2,11 +2,6 @@ import { Card } from "antd";
 import "./courseCard.css";
 import { HeartOutlined } from "@ant-design/icons";
 
-const resolveImageUrl = (url) => {
-  if (!url) return "";
-  return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
-};
-
 const CourseCard = ({ name, imageUrl }) => {
   return (
     <div className="course-card">
@@ -15,7 +10,7 @@ const CourseCard = ({ name, imageUrl }) => {
 
         <div className="course-card-image-wrapper">
           <img
-            src={resolveImageUrl(imageUrl)}
+            src={imageUrl}
             alt={name}
             className="course-card-image"
           />
